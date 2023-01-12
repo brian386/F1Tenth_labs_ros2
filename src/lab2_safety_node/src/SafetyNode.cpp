@@ -22,12 +22,32 @@ class SafetyNode: public rclcpp::Node{
         rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr lidar_sub;
         rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
         rclcpp::Publisher<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr drive_pub;
+        nav_msgs::msg::Odometry::SharedPtr odom;
+
         void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg){
             RCLCPP_INFO(this->get_logger(), "recieved something");
+            if(!odom) return;
+            std::vector<float> ranges = msg->ranges;
+            float ttc = 100.0;
+            for(unsigned int i = 0; i < ranges.size(); i++){
+                if(!std::isnan(ranges[i]) && ranges[i] <= msg->range_max && ranges[i] >= msg->range_min){
+                    float pt_angle = msg->angle_min + i * msg->angle_increment;
+                    //RCLCPP_INFO(this->get_logger(), std::to_string(pt_angle));
+                    float vel = cos(pt_angle) * odom->twist.twist.linear.x + sin(pt_angle) * odom->twist.twist.linear.y;
+                   // RCLCPP_INFO(this->get_logger(), std::to_string(vel));
+                    float dist = ranges[i];
+                   // RCLCPP_INFO(this->get_logger(), std::to_string(dist));
+                    if( vel != 0 && dist/vel > 0){
+                        ttc = std::min(ttc, dist/vel);
+                    }
+                }
+            }
+            RCLCPP_INFO(this->get_logger(), std::to_string(ttc));
         }
 
         void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg){
             RCLCPP_INFO(this->get_logger(), "recieved something");
+            odom = msg;
         }
 
 };
