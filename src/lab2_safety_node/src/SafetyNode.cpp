@@ -29,7 +29,7 @@ class SafetyNode: public rclcpp::Node{
             if(!odom) return;
             std::vector<float> ranges = msg->ranges;
             float ttc = 100.0;
-            float ttc_thresh = 0.7;
+            float ttc_thresh = 1.5;
             for(unsigned int i = 0; i < ranges.size(); i++){
                 if(!std::isnan(ranges[i]) && ranges[i] <= msg->range_max && ranges[i] >= msg->range_min){
                     float pt_angle = msg->angle_min + i * msg->angle_increment;
@@ -44,19 +44,14 @@ class SafetyNode: public rclcpp::Node{
                 }
             }
             RCLCPP_INFO(this->get_logger(), std::to_string(ttc));
-            // if(ttc < ttc_thresh){
-            //     RCLCPP_INFO(this->get_logger(), "brake");
-            //     auto drive_msg_stamped =  ackermann_msgs::msg::AckermannDriveStamped();
-            //     auto drive_msg = ackermann_msgs::msg::AckermannDrive();
-            //     drive_msg.speed = 0.0;
-            //     drive_msg_stamped.drive = drive_msg;
-            //     drive_pub->publish(drive_msg_stamped);
-            // }
-            auto drive_msg_stamped =  ackermann_msgs::msg::AckermannDriveStamped();
-            auto drive_msg = ackermann_msgs::msg::AckermannDrive();
-            drive_msg.speed = -1.0;
-            drive_msg_stamped.drive = drive_msg;
-            drive_pub->publish(drive_msg_stamped);
+            if(ttc < ttc_thresh){
+                RCLCPP_INFO(this->get_logger(), "brake");
+                auto drive_msg_stamped =  ackermann_msgs::msg::AckermannDriveStamped();
+                auto drive_msg = ackermann_msgs::msg::AckermannDrive();
+                drive_msg.speed = 0.0;
+                drive_msg_stamped.drive = drive_msg;
+                drive_pub->publish(drive_msg_stamped);
+            }
         }
 
         void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg){
